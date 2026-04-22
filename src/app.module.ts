@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from './database/database.module';
 import { TrackingLinkModule } from './tracking-link/tracking-link.module';
 import { BearerAuthGuard } from './auth/bearer-auth.guard';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
