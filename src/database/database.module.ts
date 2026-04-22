@@ -12,7 +12,7 @@ import { TrackingLinkSubscriber } from '../tracking-link/entities/tracking-link-
         type: 'postgres',
         url: config.get<string>('DB_URL'),
         entities: [TrackingLinkInput, TrackingLinkSubscriber],
-        autoLoadEntities: true,
+        migrations: [__dirname + '/migrations/*.js'],
         synchronize: false,
       }),
       inject: [ConfigService],
