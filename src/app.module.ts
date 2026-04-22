@@ -14,6 +14,7 @@ import { HealthController } from './health/health.controller';
     DatabaseModule,
     TrackingLinkModule,
   ],
+  controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: BearerAuthGuard }],
 })
 export class AppModule {}
