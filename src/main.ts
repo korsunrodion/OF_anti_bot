@@ -19,6 +19,6 @@ async function bootstrap() {
   await app.get(DataSource).runMigrations();
 
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 bootstrap();
