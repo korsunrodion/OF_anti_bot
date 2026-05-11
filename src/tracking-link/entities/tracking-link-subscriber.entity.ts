@@ -19,6 +19,27 @@ export class TrackingLinkSubscriber {
   @Column()
   subscriptionDate: string;
 
-  @Column()
+  @Column({ default: 0 })
+  totalChargebacks: number;
+
+  @Column({ nullable: true })
+  avatarUrl: string;
+
+  @Column({ nullable: true })
+  header: string;
+
+  @Column({ nullable: true })
+  isOnlineMatchesSubscription: boolean;
+
+  @Column({ nullable: true })
+  isReadingMessages: boolean;
+
+  @Column({ nullable: true })
   riskLevel: RiskLevel;
+
+  @Column({ default: false })
+  isProcessed: boolean;
+
+  @Column({ default: false })
+  isInternalData: boolean;
 }

@@ -18,6 +18,10 @@ const SUBSCRIPTION_EXAMPLE = {
   userId: 987654,
   subscriptionDate: '2024-03-15T10:00:00.000Z',
   riskLevel: 'high',
+  avatarUrl: 'https://example.com/avatar.jpg',
+  header: 'https://example.com/header.jpg',
+  isOnlineMatchesSubscription: true,
+  isReadingMessages: true,
 };
 
 @ApiBearerAuth()

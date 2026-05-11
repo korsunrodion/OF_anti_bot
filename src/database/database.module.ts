@@ -11,7 +11,7 @@ import { SnakeNamingStrategy } from './snake-naming.strategy';
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        url: config.get<string>('DB_URL'),
+        url: config.get<string>('DATABASE_URL'),
         entities: [TrackingLinkInput, TrackingLinkSubscriber],
         migrations: [__dirname + '/migrations/*.js'],
         namingStrategy: new SnakeNamingStrategy(),

@@ -3,7 +3,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 export class InitialSchema1776859200000 implements MigrationInterface {
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-      CREATE TABLE "tracking_links_input" (
+      CREATE TABLE IF NOT EXISTS "tracking_links_input" (
         "id"               varchar   NOT NULL,
         "tracking_link_id" varchar   NOT NULL,
         "is_processed"     boolean   NOT NULL DEFAULT false,
@@ -13,7 +13,7 @@ export class InitialSchema1776859200000 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE TABLE "tracking_links_subscriber" (
+      CREATE TABLE IF NOT EXISTS "tracking_links_subscriber" (
         "id"                varchar NOT NULL,
         "tracking_link_id"  varchar NOT NULL,
         "username"          varchar NOT NULL,

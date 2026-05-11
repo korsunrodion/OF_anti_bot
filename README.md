@@ -28,6 +28,14 @@
 ## Project setup
 
 ```bash
+$ cd python
+$ python -m venv .venv
+$ .venv\Scripts\activate
+$ pip install -r requirements.txt
+$ python main.py
+```
+
+```bash
 $ yarn install
 ```
 

@@ -2,12 +2,22 @@ services:
   api:
     build: .
     ports:
-      - "${PORT:-3000}:3000"
+      - '${PORT:-3000}:3000'
     environment:
       NODE_ENV: production
       PORT: 3000
-      DB_URL: postgres://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-anti_bot}
+      DB_URL: ${DB_URL}
       AUTH_KEY: ${AUTH_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  python-worker:
+    build: ./python
+    environment:
+      DB_URL: ${DB_URL}
+      JOB_INTERVAL_SECONDS: ${JOB_INTERVAL_SECONDS:-60}
     depends_on:
       postgres:
         condition: service_healthy
@@ -22,7 +32,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-anti_bot}"]
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-anti_bot}',
+        ]
       interval: 5s
       timeout: 5s
       retries: 5

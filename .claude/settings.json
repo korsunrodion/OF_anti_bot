@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(yarn build *)"
+      "Bash(yarn build *)",
+      "Bash(Get-ChildItem -Path \"e:\\\\work\\\\OF\\\\of_anti_bot\" -Depth 2)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"e:\\\\work\\\\OF\\\\of_anti_bot\" -Force | ForEach-Object { Write-Output \"$\\($_.Name\\)$\\(if \\($_.PSIsContainer\\) { '/' }\\)\" })"
     ]
   }
 }

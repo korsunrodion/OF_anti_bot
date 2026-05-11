@@ -1,24 +1,20 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { UpsertTrackingLinkDto } from '../dto/upsert-tracking-link.dto';
 import { TrackingLinkInput } from '../entities/tracking-link-input.entity';
 import { TrackingLinkSubscriber } from '../entities/tracking-link-subscriber.entity';
-import { CategorizationService } from '../categorization/categorization.service';
 import { TrackingLinkSubscriptionDto } from '../dto/tracking-link-subscription.dto';
 import { TrackingLinkDto } from '../dto/tracking-link.dto';
+import { SubscriberDto } from '../dto/subscriber.dto';
 
 @Injectable()
 export class TrackingLinkRepository {
-  private readonly logger = new Logger(TrackingLinkRepository.name);
-
   constructor(
     @InjectRepository(TrackingLinkInput)
     private readonly inputRepo: Repository<TrackingLinkInput>,
     @InjectRepository(TrackingLinkSubscriber)
     private readonly subscriberRepo: Repository<TrackingLinkSubscriber>,
-    private readonly categorizationService: CategorizationService,
-    private readonly dataSource: DataSource,
   ) {}
 
   async upsert(dto: UpsertTrackingLinkDto): Promise<void> {
@@ -34,35 +30,29 @@ export class TrackingLinkRepository {
     return this.inputRepo.findBy({ isProcessed: false });
   }
 
-  async refreshCategory(id: string): Promise<void> {
-    const input = await this.inputRepo.findOneByOrFail({ id });
-
-    const scores = await Promise.all(
-      input.subscribers.map((s) =>
-        this.categorizationService.scoreSubscriber(s, id),
-      ),
-    );
-    const riskLevel = this.categorizationService.aggregateRisk(scores);
-
-    const entities = input.subscribers.map((s) =>
-      this.subscriberRepo.create({
-        id: `${id}_${s.id}`,
-        trackingLinkId: id,
+  async upsertSubscribers(
+    manager: EntityManager,
+    trackingLinkId: string,
+    newSubscribers: SubscriberDto[],
+  ): Promise<void> {
+    const entities = newSubscribers.map((s) =>
+      manager.create(TrackingLinkSubscriber, {
+        id: `${trackingLinkId}_${s.id}`,
+        trackingLinkId,
         username: s.username,
         userId: s.userId,
         subscriptionDate: s.subscriptionDate,
-        riskLevel,
+        avatarUrl: s.avatarUrl,
+        header: s.header,
+        isOnlineMatchesSubscription: s.isOnlineMatchesSubscription,
+        isReadingMessages: s.isReadingMessages,
       }),
     );
+    await manager.save(TrackingLinkSubscriber, entities);
+  }
 
-    await this.dataSource.transaction(async (manager) => {
-      await manager.save(TrackingLinkSubscriber, entities);
-      await manager.update(TrackingLinkInput, id, { isProcessed: true });
-    });
-
-    this.logger.log(
-      `Processed tracking link "${id}" with ${entities.length} subscriber(s)`,
-    );
+  async markProcessed(manager: EntityManager, id: string): Promise<void> {
+    await manager.update(TrackingLinkInput, id, { isProcessed: true });
   }
 
   async findAllSubscriptions(
@@ -82,7 +72,7 @@ export class TrackingLinkRepository {
     limit: number,
   ): Promise<[TrackingLinkSubscriptionDto[], number]> {
     const [rows, total] = await this.subscriberRepo.findAndCount({
-      where: { trackingLinkId },
+      where: { trackingLinkId: decodeURIComponent(trackingLinkId) },
       skip: (page - 1) * limit,
       take: limit,
     });

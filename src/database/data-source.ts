@@ -8,7 +8,7 @@ config();
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
-  url: process.env.DB_URL,
+  url: process.env.DATABASE_URL,
   entities: [TrackingLinkInput, TrackingLinkSubscriber],
   migrations: ['src/database/migrations/*.ts'],
   namingStrategy: new SnakeNamingStrategy(),
