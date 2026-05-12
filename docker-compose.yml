@@ -6,7 +6,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DB_URL: ${DB_URL}
+      DATABASE_URL: ${DATABASE_URL}
       AUTH_KEY: ${AUTH_KEY}
     depends_on:
       postgres:
@@ -16,7 +16,7 @@ services:
   python-worker:
     build: ./python
     environment:
-      DB_URL: ${DB_URL}
+      DATABASE_URL: ${DATABASE_URL}
       JOB_INTERVAL_SECONDS: ${JOB_INTERVAL_SECONDS:-60}
     depends_on:
       postgres:
