@@ -6,7 +6,11 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: ${DATABASE_URL}
+      # Build the URL from the same parts that postgres service uses so the
+      # host (`postgres`), password, and db name are guaranteed to match.
+      # Do NOT pass the host `.env` DATABASE_URL — it points to localhost,
+      # which means localhost-INSIDE-the-api-container.
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-anti_bot}
       AUTH_KEY: ${AUTH_KEY}
     depends_on:
       postgres:
@@ -16,7 +20,7 @@ services:
   python-worker:
     build: ./python
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-anti_bot}
       JOB_INTERVAL_SECONDS: ${JOB_INTERVAL_SECONDS:-60}
     depends_on:
       postgres:
