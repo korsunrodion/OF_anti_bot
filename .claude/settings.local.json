@@ -1,0 +1,50 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($paths = @\\(\"C:\\\\Program Files\\\\Git\\\\usr\\\\bin\\\\ssh.exe\", \"C:\\\\Windows\\\\System32\\\\OpenSSH\\\\ssh.exe\"\\); foreach \\($p in $paths\\) { if \\(Test-Path $p\\) { Write-Output \"FOUND: $p\"; & $p -V 2>&1 } }; Write-Output \"---WSL:\"; wsl --status 2>&1 | Select-Object -First 3)",
+      "Bash(where railway *)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/Git/usr/bin\")",
+      "Bash(ssh -V)",
+      "Bash(export RAILWAY_CALLER=\"skill:use-railway@1.2.0\")",
+      "Bash(export RAILWAY_AGENT_SESSION=\"railway-skill-20260511-bot\")",
+      "Bash(\"/c/Program Files/nodejs/railway.cmd\" ssh \"ls -la /volume; df -h /volume\")",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")",
+      "Bash(railway ssh *)",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260511-bot\"; railway volume update --help 2>&1)",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260511-bot\"; railway ssh \"rm -f /volume/model.pkl.tmp && ls -la /volume && df -h /volume\" 2>&1)",
+      "Bash(ls \"C:/Users/korsu/.claude/skills/use-railway/scripts/\" 2>&1 | head -20)",
+      "Read(//c/Users/korsu/.claude/skills/use-railway/scripts/**)",
+      "Bash(command -v jq)",
+      "Bash(jq --version)",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260511-bot\"; railway ssh \"df -h /volume\" 2>&1)",
+      "Bash(ls -la \"/e/work/OF/of_anti_bot/python/model/\" 2>&1; echo \"---\"; ls -la \"/c/\" 2>&1 | head -3; echo \"--- recycle ---\"; ls -la \"/c/\\\\$Recycle.Bin/\" 2>&1 | head -5)",
+      "Read(//c//**)",
+      "Read(//c/$Recycle.Bin//**)",
+      "Bash(ls -la \"/e/\\\\$RECYCLE.BIN/S-1-5-21-1699927462-867064631-2966219584-1001/\" 2>&1 | head -20)",
+      "Read(//e/$RECYCLE.BIN/S-1-5-21-1699927462-867064631-2966219584-1001//**)",
+      "Bash(grep -E \"RU9HIYK|\\\\.pkl$\")",
+      "Read(//e/$RECYCLE.BIN/S-1-5-21-1699927462-867064631-2966219584-1001/**)",
+      "Bash(cp \"/e/\\\\$RECYCLE.BIN/S-1-5-21-1699927462-867064631-2966219584-1001/\\\\$RU9HIYK.pkl\" \"/e/work/OF/of_anti_bot/python/model/model.pkl\" && ls -la \"/e/work/OF/of_anti_bot/python/model/model.pkl\")",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260511-bot\"; railway ssh \"ls -la /volume\" 2>&1)",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260511-bot\"; railway variables --set \"MODEL_PATH=/volume/model.pkl\" --service OF_anti_bot 2>&1)",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260511-bot\"; railway variables --service OF_anti_bot --json 2>&1 | Select-String -Pattern \"MODEL_PATH\")",
+      "Bash(git check-ignore *)",
+      "Bash(git count-objects *)",
+      "Bash(set -e)",
+      "Bash(git reset *)",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Move model.pkl to Railway volume; read path from MODEL_PATH *)",
+      "Bash(git commit *)",
+      "Bash(git ls-tree *)",
+      "Bash(git gc *)",
+      "Bash(git reflog *)",
+      "mcp__railway__list_variables",
+      "mcp__railway__add_reference_variable",
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python dump_verify_db.py)"
+    ],
+    "additionalDirectories": [
+      "E:\\$RECYCLE.BIN\\S-1-5-21-1699927462-867064631-2966219584-1001"
+    ]
+  }
+}

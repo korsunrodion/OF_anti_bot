@@ -42,4 +42,9 @@ export class TrackingLinkSubscriber {
 
   @Column({ default: false })
   isInternalData: boolean;
+
+  // Hides seeded rows from API responses; orthogonal to `isInternalData`,
+  // which controls whether the Python predict job overwrites the label.
+  @Column({ default: false })
+  isInternalData2: boolean;
 }

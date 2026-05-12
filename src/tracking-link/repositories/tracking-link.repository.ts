@@ -60,6 +60,7 @@ export class TrackingLinkRepository {
     limit: number,
   ): Promise<[TrackingLinkSubscriptionDto[], number]> {
     const [rows, total] = await this.subscriberRepo.findAndCount({
+      where: { isInternalData2: false },
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -72,7 +73,10 @@ export class TrackingLinkRepository {
     limit: number,
   ): Promise<[TrackingLinkSubscriptionDto[], number]> {
     const [rows, total] = await this.subscriberRepo.findAndCount({
-      where: { trackingLinkId: decodeURIComponent(trackingLinkId) },
+      where: {
+        trackingLinkId: decodeURIComponent(trackingLinkId),
+        isInternalData2: false,
+      },
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -81,7 +85,7 @@ export class TrackingLinkRepository {
 
   async findLinkSummary(trackingLinkId: string): Promise<TrackingLinkDto> {
     const [rows, count] = await this.subscriberRepo.findAndCount({
-      where: { trackingLinkId },
+      where: { trackingLinkId, isInternalData2: false },
     });
     if (count === 0) {
       throw new NotFoundException(
