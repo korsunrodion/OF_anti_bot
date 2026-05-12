@@ -41,7 +41,20 @@
       "Bash(git reflog *)",
       "mcp__railway__list_variables",
       "mcp__railway__add_reference_variable",
-      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python dump_verify_db.py)"
+      "Bash(PYTHONIOENCODING=utf-8 .venv/Scripts/python dump_verify_db.py)",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260512-bot\"; railway variables --service Postgres --json 2>&1 | Select-String -Pattern \"PUBLIC|TCP_PROXY|DATABASE_URL|PGHOST|PGPORT\")",
+      "mcp__railway__list_services",
+      "PowerShell(railway login 2>&1)",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260512-bot\"; railway whoami --json 2>&1 | Select-Object -First 2; railway list --json 2>&1 | Select-String -Pattern \"id|name\" | Select-Object -First 20)",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260512-bot\"; railway volume detach --help 2>&1; Write-Output \"===\"; railway volume attach --help 2>&1)",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260512-bot\"; railway status --json 2>&1 | Select-String -Pattern \"service|environment|project\")",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260512-bot\"; railway link --project discerning-charm --environment production --service OF_anti_bot 2>&1 | Select-Object -Last 2; Write-Output \"--- detach ---\"; railway volume detach --volume of_anti_bot-volume --yes 2>&1)",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260512-bot\"; railway link --project discerning-charm --environment production --service kind-creativity 2>&1 | Select-Object -Last 2; Write-Output \"--- attach ---\"; railway volume attach --volume of_anti_bot-volume --yes 2>&1; Write-Output \"--- verify ---\"; railway volume list --json 2>&1)",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260512-bot\"; railway variables --service kind-creativity --json 2>&1 | Select-String -Pattern \"MODEL_PATH|DATABASE_URL\")",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260512-bot\"; railway variables --service kind-creativity --set \"MODEL_PATH=/volume/model.pkl\" 2>&1 | Select-Object -Last 5)",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260512-bot\"; railway variables --service kind-creativity --json 2>&1 | Select-String -Pattern \"MODEL_PATH|DATABASE_URL|RAILWAY_VOLUME\")",
+      "Bash(.venv/Scripts/python -c \"import lightgbm; print\\('local lightgbm:', lightgbm.__version__\\)\")",
+      "PowerShell($env:RAILWAY_CALLER=\"skill:use-railway@1.2.0\"; $env:RAILWAY_AGENT_SESSION=\"railway-skill-20260512-bot\"; Write-Output \"--- local hash ---\"; \\(Get-FileHash -Algorithm SHA256 \"e:\\\\work\\\\OF\\\\of_anti_bot\\\\python\\\\model\\\\model.pkl\"\\).Hash; Write-Output \"--- remote hash ---\"; railway ssh \"sha256sum /volume/model.pkl && stat -c '%s' /volume/model.pkl\" 2>&1)"
     ],
     "additionalDirectories": [
       "E:\\$RECYCLE.BIN\\S-1-5-21-1699927462-867064631-2966219584-1001"
