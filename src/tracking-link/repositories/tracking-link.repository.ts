@@ -19,8 +19,9 @@ export class TrackingLinkRepository {
 
   async upsert(dto: UpsertTrackingLinkDto): Promise<void> {
     await this.inputRepo.save({
-      id: dto.trackingLinkId,
+      id: String(dto.trackingLinkId),
       trackingLinkId: dto.trackingLinkId,
+      trackingLinkName: dto.trackingLinkName,
       isProcessed: false,
       subscribers: dto.subscriptions,
     });
@@ -32,13 +33,15 @@ export class TrackingLinkRepository {
 
   async upsertSubscribers(
     manager: EntityManager,
-    trackingLinkId: string,
+    trackingLinkId: number,
+    trackingLinkName: string,
     newSubscribers: SubscriberDto[],
   ): Promise<void> {
     const entities = newSubscribers.map((s) =>
       manager.create(TrackingLinkSubscriber, {
         id: `${trackingLinkId}_${s.id}`,
         trackingLinkId,
+        trackingLinkName,
         username: s.username,
         userId: s.userId,
         subscriptionDate: s.subscriptionDate,
@@ -68,22 +71,18 @@ export class TrackingLinkRepository {
   }
 
   async findSubscriptionsByLinkId(
-    trackingLinkId: string,
-    page: number,
-    limit: number,
-  ): Promise<[TrackingLinkSubscriptionDto[], number]> {
-    const [rows, total] = await this.subscriberRepo.findAndCount({
+    trackingLinkId: number,
+  ): Promise<TrackingLinkSubscriptionDto[]> {
+    const rows = await this.subscriberRepo.find({
       where: {
-        trackingLinkId: decodeURIComponent(trackingLinkId),
+        trackingLinkId,
         isInternalData2: false,
       },
-      skip: (page - 1) * limit,
-      take: limit,
     });
-    return [rows.map(toSubscriptionDto), total];
+    return rows.map(toSubscriptionDto);
   }
 
-  async findLinkSummary(trackingLinkId: string): Promise<TrackingLinkDto> {
+  async findLinkSummary(trackingLinkId: number): Promise<TrackingLinkDto> {
     const [rows, count] = await this.subscriberRepo.findAndCount({
       where: { trackingLinkId, isInternalData2: false },
     });
@@ -92,7 +91,12 @@ export class TrackingLinkRepository {
         `No results found for tracking link "${trackingLinkId}"`,
       );
     }
-    return { trackingLinkId, riskLevel: rows[0].riskLevel, count };
+    return {
+      trackingLinkId,
+      trackingLinkName: rows[0].trackingLinkName,
+      riskLevel: rows[0].riskLevel,
+      count,
+    };
   }
 }
 
@@ -101,6 +105,7 @@ function toSubscriptionDto(
 ): TrackingLinkSubscriptionDto {
   return {
     trackingLinkId: s.trackingLinkId,
+    trackingLinkName: s.trackingLinkName,
     username: s.username,
     userId: s.userId,
     subscriptionDate: s.subscriptionDate,

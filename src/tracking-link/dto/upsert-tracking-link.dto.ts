@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsInt, IsString, ValidateNested } from 'class-validator';
 import { SubscriberDto } from './subscriber.dto';
 
 const SUBSCRIPTION_EXAMPLE = {
@@ -14,9 +14,14 @@ const SUBSCRIPTION_EXAMPLE = {
   isReadingMessages: false,
 };
 export class UpsertTrackingLinkDto {
+  @ApiProperty({ example: 12345 })
+  @Type(() => Number)
+  @IsInt()
+  trackingLinkId: number;
+
   @ApiProperty({ example: '@model_username' })
   @IsString()
-  trackingLinkId: string;
+  trackingLinkName: string;
 
   @ApiProperty({ type: [SubscriberDto], example: [SUBSCRIPTION_EXAMPLE] })
   @IsArray()

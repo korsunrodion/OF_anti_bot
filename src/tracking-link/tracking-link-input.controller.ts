@@ -10,7 +10,8 @@ import {
 } from '@nestjs/swagger';
 
 const UPSERT_EXAMPLE = {
-  trackingLinkId: '@model_username',
+  trackingLinkId: 12345,
+  trackingLinkName: '@model_username',
   subscriptions: [
     {
       id: '12345',

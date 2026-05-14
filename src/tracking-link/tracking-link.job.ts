@@ -25,7 +25,8 @@ export class TrackingLinkJob {
         await this.dataSource.transaction(async (manager) => {
           await this.repository.upsertSubscribers(
             manager,
-            link.id,
+            link.trackingLinkId,
+            link.trackingLinkName,
             link.subscribers,
           );
           await this.repository.markProcessed(manager, link.id);

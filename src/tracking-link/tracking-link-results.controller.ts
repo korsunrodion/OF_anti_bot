@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -13,7 +13,8 @@ import { TrackingLinkDto } from './dto/tracking-link.dto';
 import { PaginationQueryDto, PaginatedResponseDto } from './dto/pagination.dto';
 
 const SUBSCRIPTION_EXAMPLE = {
-  trackingLinkId: 'link_abc123',
+  trackingLinkId: 12345,
+  trackingLinkName: '@model_username',
   username: 'john_doe',
   userId: 987654,
   subscriptionDate: '2024-03-15T10:00:00.000Z',
@@ -59,14 +60,15 @@ export class TrackingLinkResultsController {
   }
 
   @ApiOperation({ summary: 'Get summary for a tracking link' })
-  @ApiParam({ name: 'trackingLinkId', example: 'link_abc123' })
+  @ApiParam({ name: 'trackingLinkId', example: 12345 })
   @ApiResponse({
     status: 200,
     type: TrackingLinkDto,
     content: {
       'application/json': {
         example: {
-          trackingLinkId: 'link_abc123',
+          trackingLinkId: 12345,
+          trackingLinkName: '@model_username',
           riskLevel: 'high',
           count: 42,
         },
@@ -76,15 +78,13 @@ export class TrackingLinkResultsController {
   @ApiResponse({ status: 404, description: 'Tracking link not found' })
   @Get(':trackingLinkId/summary')
   async getSummary(
-    @Param('trackingLinkId') trackingLinkId: string,
+    @Param('trackingLinkId', ParseIntPipe) trackingLinkId: number,
   ): Promise<TrackingLinkDto> {
     return this.repository.findLinkSummary(trackingLinkId);
   }
 
   @ApiOperation({ summary: 'Get subscriptions for a tracking link' })
-  @ApiParam({ name: 'trackingLinkId', example: 'link_abc123' })
-  @ApiQuery({ name: 'page', required: false, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiParam({ name: 'trackingLinkId', example: 12345 })
   @ApiResponse({
     status: 200,
     description: 'Paginated subscriptions',
@@ -93,22 +93,14 @@ export class TrackingLinkResultsController {
         example: {
           data: [SUBSCRIPTION_EXAMPLE],
           total: 50,
-          page: 1,
-          limit: 20,
         },
       },
     },
   })
   @Get(':trackingLinkId')
   async findByLinkId(
-    @Param('trackingLinkId') trackingLinkId: string,
-    @Query() query: PaginationQueryDto,
-  ): Promise<PaginatedResponseDto<TrackingLinkSubscriptionDto>> {
-    const [data, total] = await this.repository.findSubscriptionsByLinkId(
-      trackingLinkId,
-      query.page,
-      query.limit,
-    );
-    return { data, total, page: query.page, limit: query.limit };
+    @Param('trackingLinkId', ParseIntPipe) trackingLinkId: number,
+  ): Promise<TrackingLinkSubscriptionDto[]> {
+    return this.repository.findSubscriptionsByLinkId(trackingLinkId);
   }
 }

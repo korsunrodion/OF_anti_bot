@@ -10,13 +10,14 @@ so they:
   - serve as warm context for cold-start prediction on new tracking models
 
 Field mapping (Subscription → tracking_links_subscriber):
-  Subscription.id                 → id (string, prefixed `seed_`)
-  Subscription.tracking_model_name → tracking_link_id
-  Subscription.user_name          → username
-  Subscription.user_id (str)      → user_id (int)
-  Subscription.subscribed_at      → subscription_date
-  Subscription.risk_level         → risk_level (lower-cased)
-  Subscription.total_chargebacks  → total_chargebacks (int)
+  Subscription.id                  → id (string, prefixed `seed_`)
+  (sequential per distinct name)   → tracking_link_id (int, dummy)
+  Subscription.tracking_model_name → tracking_link_name (string)
+  Subscription.user_name           → username
+  Subscription.user_id (str)       → user_id (int)
+  Subscription.subscribed_at       → subscription_date
+  Subscription.risk_level          → risk_level (lower-cased)
+  Subscription.total_chargebacks   → total_chargebacks (int)
 
 Output: ../src/seed/subscribers.json
 
@@ -89,7 +90,7 @@ def dump(output_path: str):
 
         out.append({
             'id':                f"seed_{r['id']}",
-            'trackingLinkId':    tracking,
+            'trackingLinkName':  tracking,
             'username':          username,
             'userId':            user_id,
             'subscriptionDate':  str(subscribed_at),
@@ -97,7 +98,15 @@ def dump(output_path: str):
             'totalChargebacks':  _to_int(r.get('total_chargebacks'), 0),
         })
 
+    # Assign dummy sequential tracking_link_id per distinct trackingLinkName.
+    # Sorted for deterministic output across runs on identical input.
+    distinct_names = sorted({row['trackingLinkName'] for row in out})
+    name_to_id = {name: i + 1 for i, name in enumerate(distinct_names)}
+    for row in out:
+        row['trackingLinkId'] = name_to_id[row['trackingLinkName']]
+
     print(f"\n  Output rows : {len(out)}", flush=True)
+    print(f"  Distinct tracking links: {len(name_to_id)}", flush=True)
     print(f"  Skipped     : "
           f"{skipped_no_username} (no username), "
           f"{skipped_no_model} (no tracking_model_name), "

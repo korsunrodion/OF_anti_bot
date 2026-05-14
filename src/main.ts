@@ -28,7 +28,8 @@ async function seedIfEmpty(dataSource: DataSource): Promise<void> {
 
   const raw = JSON.parse(fs.readFileSync(seedPath, 'utf-8')) as Array<{
     id: string;
-    trackingLinkId: string;
+    trackingLinkId: number;
+    trackingLinkName: string;
     username: string;
     userId: number;
     subscriptionDate: string;

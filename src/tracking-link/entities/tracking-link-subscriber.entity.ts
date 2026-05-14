@@ -8,7 +8,10 @@ export class TrackingLinkSubscriber {
   id: string;
 
   @Column()
-  trackingLinkId: string;
+  trackingLinkId: number;
+
+  @Column()
+  trackingLinkName: string;
 
   @Column()
   username: string;

@@ -4,8 +4,11 @@ import type { RiskLevel } from '../entities/tracking-link-input.entity';
 const RISK_LEVELS = ['no risk', 'low', 'high', 'very high', 'extreme'] as const;
 
 export class TrackingLinkSubscriptionDto {
+  @ApiProperty({ example: 1 })
+  trackingLinkId: number;
+
   @ApiProperty({ example: 'link_abc123' })
-  trackingLinkId: string;
+  trackingLinkName: string;
 
   @ApiProperty({ example: 'john_doe' })
   username: string;

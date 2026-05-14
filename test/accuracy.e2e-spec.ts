@@ -47,7 +47,8 @@ describe('Categorization accuracy (e2e)', () => {
   let job: TrackingLinkJob;
   let appDataSource: DataSource;
   let extDataSource: DataSource;
-  const insertedModelNames: string[] = [];
+  const insertedTrackingLinkIds: number[] = [];
+  const modelNameToId = new Map<string, number>();
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -74,14 +75,14 @@ describe('Categorization accuracy (e2e)', () => {
   }, 30_000);
 
   afterAll(async () => {
-    if (insertedModelNames.length) {
+    if (insertedTrackingLinkIds.length) {
       await appDataSource.query(
         `DELETE FROM tracking_links_subscriber WHERE tracking_link_id = ANY($1)`,
-        [insertedModelNames],
+        [insertedTrackingLinkIds],
       );
       await appDataSource.query(
         `DELETE FROM tracking_links_input WHERE id = ANY($1)`,
-        [insertedModelNames],
+        [insertedTrackingLinkIds.map(String)],
       );
     }
     await extDataSource.destroy();
@@ -105,6 +106,8 @@ describe('Categorization accuracy (e2e)', () => {
     const originalRisk = new Map<string, string>();
 
     // 2. Send each model's subscribers to the classification endpoint
+    const idBase = Date.now();
+    let idx = 0;
     for (const { trackingModelName: modelName } of models) {
       const rows = await repo.find({
         where: { trackingModelName: modelName },
@@ -115,7 +118,9 @@ describe('Categorization accuracy (e2e)', () => {
       );
       if (valid.length === 0) continue;
 
-      insertedModelNames.push(modelName);
+      const trackingLinkId = idBase + idx++;
+      insertedTrackingLinkIds.push(trackingLinkId);
+      modelNameToId.set(modelName, trackingLinkId);
 
       for (const r of valid) {
         originalRisk.set(
@@ -139,7 +144,11 @@ describe('Categorization accuracy (e2e)', () => {
       await request(BASE_URL)
         .post('/tracking-links/input')
         .set('Authorization', `Bearer ${AUTH_KEY}`)
-        .send({ trackingLinkId: modelName, subscriptions })
+        .send({
+          trackingLinkId,
+          trackingLinkName: modelName,
+          subscriptions,
+        })
         .expect(201);
     }
 
@@ -160,10 +169,11 @@ describe('Categorization accuracy (e2e)', () => {
     let firstMismatch = true;
 
     for (const { trackingModelName: modelName } of models) {
-      if (!insertedModelNames.includes(modelName)) continue;
+      const trackingLinkId = modelNameToId.get(modelName);
+      if (trackingLinkId === undefined) continue;
 
       const res = await request(BASE_URL)
-        .get(`/tracking-links/${encodeURIComponent(modelName)}`)
+        .get(`/tracking-links/${trackingLinkId}`)
         .set('Authorization', `Bearer ${AUTH_KEY}`)
         .query({ page: 1, limit: 1000 })
         .expect(200);
