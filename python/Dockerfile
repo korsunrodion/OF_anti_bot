@@ -18,5 +18,8 @@ RUN uv sync --frozen --no-dev
 
 COPY . .
 
-CMD ["uv", "run", "main.py"]
+# Call the venv's python directly — bypasses `uv run`'s implicit re-sync /
+# env-validation step that can stall silently at container start. `-u` forces
+# unbuffered I/O as a belt-and-suspenders alongside PYTHONUNBUFFERED above.
+CMD ["/app/.venv/bin/python", "-u", "main.py"]
     
