@@ -1,5 +1,11 @@
 FROM python:3.12-slim
 
+# Stream stdout/stderr unbuffered so Railway (and any docker logs viewer) sees
+# print/logging output in real time. Without this Python block-buffers when
+# not attached to a TTY and the container appears to do nothing for minutes.
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app
