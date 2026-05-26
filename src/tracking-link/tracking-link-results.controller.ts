@@ -10,7 +10,11 @@ import {
 import { TrackingLinkRepository } from './repositories/tracking-link.repository';
 import { TrackingLinkSubscriptionDto } from './dto/tracking-link-subscription.dto';
 import { TrackingLinkDto } from './dto/tracking-link.dto';
-import { PaginationQueryDto, PaginatedResponseDto } from './dto/pagination.dto';
+import {
+  PaginationQueryDto,
+  PaginatedResponseDto,
+  SubscriberFilterDto,
+} from './dto/pagination.dto';
 
 const SUBSCRIPTION_EXAMPLE = {
   trackingLinkId: 12345,
@@ -34,6 +38,16 @@ export class TrackingLinkResultsController {
   @ApiOperation({ summary: 'Get all subscriptions' })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiQuery({
+    name: 'createdSince',
+    required: false,
+    example: '2026-05-01T00:00:00.000Z',
+  })
+  @ApiQuery({
+    name: 'updatedSince',
+    required: false,
+    example: '2026-05-01T00:00:00.000Z',
+  })
   @ApiResponse({
     status: 200,
     description: 'Paginated subscriptions',
@@ -55,6 +69,7 @@ export class TrackingLinkResultsController {
     const [data, total] = await this.repository.findAllSubscriptions(
       query.page,
       query.limit,
+      { createdSince: query.createdSince, updatedSince: query.updatedSince },
     );
     return { data, total, page: query.page, limit: query.limit };
   }
@@ -85,6 +100,16 @@ export class TrackingLinkResultsController {
 
   @ApiOperation({ summary: 'Get subscriptions for a tracking link' })
   @ApiParam({ name: 'trackingLinkId', example: 12345 })
+  @ApiQuery({
+    name: 'createdSince',
+    required: false,
+    example: '2026-05-01T00:00:00.000Z',
+  })
+  @ApiQuery({
+    name: 'updatedSince',
+    required: false,
+    example: '2026-05-01T00:00:00.000Z',
+  })
   @ApiResponse({
     status: 200,
     description: 'Paginated subscriptions',
@@ -100,7 +125,11 @@ export class TrackingLinkResultsController {
   @Get(':trackingLinkId')
   async findByLinkId(
     @Param('trackingLinkId', ParseIntPipe) trackingLinkId: number,
+    @Query() query: SubscriberFilterDto,
   ): Promise<TrackingLinkSubscriptionDto[]> {
-    return this.repository.findSubscriptionsByLinkId(trackingLinkId);
+    return this.repository.findSubscriptionsByLinkId(trackingLinkId, {
+      createdSince: query.createdSince,
+      updatedSince: query.updatedSince,
+    });
   }
 }

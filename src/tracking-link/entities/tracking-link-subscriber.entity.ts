@@ -1,4 +1,10 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export type RiskLevel = 'no risk' | 'low' | 'high' | 'very high' | 'extreme';
 
@@ -50,4 +56,10 @@ export class TrackingLinkSubscriber {
   // which controls whether the Python predict job overwrites the label.
   @Column({ default: false })
   isInternalData2: boolean;
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt: Date;
 }

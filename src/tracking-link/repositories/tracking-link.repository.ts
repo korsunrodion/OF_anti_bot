@@ -1,12 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, MoreThanOrEqual, Repository } from 'typeorm';
 import { UpsertTrackingLinkDto } from '../dto/upsert-tracking-link.dto';
 import { TrackingLinkInput } from '../entities/tracking-link-input.entity';
 import { TrackingLinkSubscriber } from '../entities/tracking-link-subscriber.entity';
 import { TrackingLinkSubscriptionDto } from '../dto/tracking-link-subscription.dto';
 import { TrackingLinkDto } from '../dto/tracking-link.dto';
 import { SubscriberDto } from '../dto/subscriber.dto';
+
+export interface SubscriberFilter {
+  createdSince?: string;
+  updatedSince?: string;
+}
 
 @Injectable()
 export class TrackingLinkRepository {
@@ -61,9 +66,13 @@ export class TrackingLinkRepository {
   async findAllSubscriptions(
     page: number,
     limit: number,
+    filter: SubscriberFilter = {},
   ): Promise<[TrackingLinkSubscriptionDto[], number]> {
     const [rows, total] = await this.subscriberRepo.findAndCount({
-      where: { isInternalData2: false },
+      where: {
+        isInternalData2: false,
+        ...buildTimestampFilter(filter),
+      },
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -72,11 +81,13 @@ export class TrackingLinkRepository {
 
   async findSubscriptionsByLinkId(
     trackingLinkId: number,
+    filter: SubscriberFilter = {},
   ): Promise<TrackingLinkSubscriptionDto[]> {
     const rows = await this.subscriberRepo.find({
       where: {
         trackingLinkId,
         isInternalData2: false,
+        ...buildTimestampFilter(filter),
       },
     });
     return rows.map(toSubscriptionDto);
@@ -110,5 +121,21 @@ function toSubscriptionDto(
     userId: s.userId,
     subscriptionDate: s.subscriptionDate,
     riskLevel: s.riskLevel,
+    createdAt: s.createdAt,
+    updatedAt: s.updatedAt,
   };
+}
+
+function buildTimestampFilter(filter: SubscriberFilter) {
+  const where: {
+    createdAt?: ReturnType<typeof MoreThanOrEqual<Date>>;
+    updatedAt?: ReturnType<typeof MoreThanOrEqual<Date>>;
+  } = {};
+  if (filter.createdSince) {
+    where.createdAt = MoreThanOrEqual(new Date(filter.createdSince));
+  }
+  if (filter.updatedSince) {
+    where.updatedAt = MoreThanOrEqual(new Date(filter.updatedSince));
+  }
+  return where;
 }

@@ -1,8 +1,28 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsInt, IsISO8601, IsOptional, Max, Min } from 'class-validator';
 
-export class PaginationQueryDto {
+export class SubscriberFilterDto {
+  @ApiPropertyOptional({
+    description:
+      'Return only rows created at or after this ISO 8601 timestamp.',
+    example: '2026-05-01T00:00:00.000Z',
+  })
+  @IsOptional()
+  @IsISO8601()
+  createdSince?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Return only rows updated at or after this ISO 8601 timestamp.',
+    example: '2026-05-01T00:00:00.000Z',
+  })
+  @IsOptional()
+  @IsISO8601()
+  updatedSince?: string;
+}
+
+export class PaginationQueryDto extends SubscriberFilterDto {
   @ApiPropertyOptional({ example: 1, minimum: 1, default: 1 })
   @IsOptional()
   @Type(() => Number)

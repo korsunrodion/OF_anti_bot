@@ -68,7 +68,8 @@
       "Bash(npx eslint *)",
       "Bash(e:/work/OF/of_anti_bot/python/.venv/Scripts/python.exe -c \"import peewee, dotenv, psycopg2; print\\('all deps present'\\)\")",
       "Bash(DB_VERIFY_URL=\"postgresql://postgres:17101996@localhost:5432/of_parser\" .venv/Scripts/python.exe dump_verify_db.py)",
-      "Bash(e:/work/OF/of_anti_bot/python/.venv/Scripts/python.exe -c \"import json; d = json.load\\(open\\('e:/work/OF/of_anti_bot/src/seed/subscribers.json', encoding='utf-8'\\)\\); print\\('rows:', len\\(d\\)\\); print\\('first row keys:', sorted\\(d[0].keys\\(\\)\\)\\); print\\('first row:', d[0]\\); print\\('distinct trackingLinkIds \\(sample\\):', sorted\\({r['trackingLinkId'] for r in d}\\)[:10], '...', sorted\\({r['trackingLinkId'] for r in d}\\)[-3:]\\); print\\('type of trackingLinkId:', type\\(d[0]['trackingLinkId']\\).__name__\\); print\\('type of trackingLinkName:', type\\(d[0]['trackingLinkName']\\).__name__\\)\")"
+      "Bash(e:/work/OF/of_anti_bot/python/.venv/Scripts/python.exe -c \"import json; d = json.load\\(open\\('e:/work/OF/of_anti_bot/src/seed/subscribers.json', encoding='utf-8'\\)\\); print\\('rows:', len\\(d\\)\\); print\\('first row keys:', sorted\\(d[0].keys\\(\\)\\)\\); print\\('first row:', d[0]\\); print\\('distinct trackingLinkIds \\(sample\\):', sorted\\({r['trackingLinkId'] for r in d}\\)[:10], '...', sorted\\({r['trackingLinkId'] for r in d}\\)[-3:]\\); print\\('type of trackingLinkId:', type\\(d[0]['trackingLinkId']\\).__name__\\); print\\('type of trackingLinkName:', type\\(d[0]['trackingLinkName']\\).__name__\\)\")",
+      "Bash(echo \"exit=$?\")"
     ],
     "additionalDirectories": [
       "E:\\$RECYCLE.BIN\\S-1-5-21-1699927462-867064631-2966219584-1001"
