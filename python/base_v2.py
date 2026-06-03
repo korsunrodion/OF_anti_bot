@@ -25,16 +25,18 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
         'user_id':           'user_id_num',
     })
 
-    # format='ISO8601' + utc=True so mixed inputs parse uniformly: both naive
-    # 'YYYY-MM-DD HH:MM:SS' (test inserts) and the NestJS app's tz-aware
-    # 'YYYY-MM-DDTHH:MM:SS.sssZ' end up as UTC timestamps. Without these
-    # pandas locks onto the first row's format and coerces the rest to NaT.
+    # Mixed ISO8601 date shapes ('...Z', '...+00:00', tz-naive space, 'Not Found').
+    # format='mixed' parses each value independently so we don't silently
+    # NaT-drop ~86% of new links (incl. ~all high-risk rows) the way a
+    # formatless to_datetime does. utc=True + tz_localize(None) keeps the
+    # tz-naive epoch convention used at training time.
     df['subscribed_at'] = pd.to_datetime(
-        df['subscribed_at'], errors='coerce', utc=True, format='ISO8601')
+        df['subscribed_at'], format='mixed', utc=True, errors='coerce'
+    ).dt.tz_localize(None)
     df = df.dropna(subset=['subscribed_at', 'user_name'])
 
     df['risk_level'] = (
-        df['risk_level'].fillna('No risk')
+        df['risk_level'].fillna('no risk')
         .str.title()
         .replace({'No Risk': 'No risk'})
     )
