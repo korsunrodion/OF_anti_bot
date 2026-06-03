@@ -1,6 +1,8 @@
 import os
 from dotenv import load_dotenv
-from peewee import PostgresqlDatabase, Model, CharField, IntegerField, BooleanField
+from peewee import (
+    PostgresqlDatabase, Model, CharField, IntegerField, BooleanField, DateTimeField
+)
 from urllib.parse import urlparse
 
 load_dotenv()
@@ -40,6 +42,7 @@ class TrackingLinkSubscriber(Model):
     is_processed      = BooleanField(default=False)
     total_chargebacks = IntegerField(default=0)
     is_internal_data  = BooleanField(null=True, default=False)
+    updated_at        = DateTimeField(null=True)
 
     class Meta:
         database   = db
