@@ -1,9 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, MoreThanOrEqual, Repository } from 'typeorm';
+import { EntityManager, In, MoreThanOrEqual, Repository } from 'typeorm';
 import { UpsertTrackingLinkDto } from '../dto/upsert-tracking-link.dto';
 import { TrackingLinkInput } from '../entities/tracking-link-input.entity';
-import { TrackingLinkSubscriber } from '../entities/tracking-link-subscriber.entity';
+import {
+  RiskLevel,
+  TrackingLinkSubscriber,
+} from '../entities/tracking-link-subscriber.entity';
 import { TrackingLinkSubscriptionDto } from '../dto/tracking-link-subscription.dto';
 import { TrackingLinkDto } from '../dto/tracking-link.dto';
 import { SubscriberDto } from '../dto/subscriber.dto';
@@ -11,6 +14,7 @@ import { SubscriberDto } from '../dto/subscriber.dto';
 export interface SubscriberFilter {
   createdSince?: string;
   updatedSince?: string;
+  riskLevel?: RiskLevel[];
 }
 
 @Injectable()
@@ -130,12 +134,16 @@ function buildTimestampFilter(filter: SubscriberFilter) {
   const where: {
     createdAt?: ReturnType<typeof MoreThanOrEqual<Date>>;
     updatedAt?: ReturnType<typeof MoreThanOrEqual<Date>>;
+    riskLevel?: ReturnType<typeof In<RiskLevel>>;
   } = {};
   if (filter.createdSince) {
     where.createdAt = MoreThanOrEqual(new Date(filter.createdSince));
   }
   if (filter.updatedSince) {
     where.updatedAt = MoreThanOrEqual(new Date(filter.updatedSince));
+  }
+  if (filter.riskLevel?.length) {
+    where.riskLevel = In(filter.riskLevel);
   }
   return where;
 }

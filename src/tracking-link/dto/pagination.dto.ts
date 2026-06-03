@@ -1,6 +1,23 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsInt, IsISO8601, IsOptional, Max, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsISO8601,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
+import type { RiskLevel } from '../entities/tracking-link-subscriber.entity';
+
+export const RISK_LEVELS = [
+  'no risk',
+  'low',
+  'high',
+  'very high',
+  'extreme',
+] as const;
 
 export class SubscriberFilterDto {
   @ApiPropertyOptional({
@@ -20,6 +37,32 @@ export class SubscriberFilterDto {
   @IsOptional()
   @IsISO8601()
   updatedSince?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Return only rows whose risk_level matches one of these values. ' +
+      'Pass multiple via comma-separated string (?riskLevel=high,extreme) ' +
+      'or repeated query keys (?riskLevel=high&riskLevel=extreme). ' +
+      'Rows with NULL risk_level (not yet scored by the predict job) are ' +
+      'excluded whenever this filter is set; omit it to include them.',
+    enum: RISK_LEVELS,
+    isArray: true,
+    example: ['high', 'extreme'],
+  })
+  @IsOptional()
+  @Transform(({ value }): RiskLevel[] | undefined => {
+    if (value === undefined || value === null) return undefined;
+    if (Array.isArray(value)) return value as RiskLevel[];
+    if (typeof value === 'string')
+      return value
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean) as RiskLevel[];
+    return [value as RiskLevel];
+  })
+  @IsArray()
+  @IsEnum(RISK_LEVELS, { each: true })
+  riskLevel?: RiskLevel[];
 }
 
 export class PaginationQueryDto extends SubscriberFilterDto {
