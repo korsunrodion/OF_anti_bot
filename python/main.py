@@ -43,9 +43,9 @@ def main() -> None:
     from base import check_are_unprocessed
 
     def run_job() -> None:
-        if check_are_unprocessed():
-            logger.info("Running job")
-            predict()
+        # if check_are_unprocessed():
+        logger.info("Running job")
+        predict()
 
     logger.info("Job runner started (interval=%ds)", INTERVAL_SECONDS)
     while True:
