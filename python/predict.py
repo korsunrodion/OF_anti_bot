@@ -151,21 +151,23 @@ def predict():
     print(f'  predict: {time.time()-t1:.2f}s  '
           f'({(time.time()-t1)*1e3/len(df):.2f} ms/row)')
 
-    # Build username → risk_level (title-case) mapping.
+    # Build row-id → risk_level (title-case) mapping — keyed PER ROW so the same
+    # user can be high-risk in one cohort and No-risk in another.
     classes = list(learner.model.classes)
+    keys = df['id'].to_numpy() if 'id' in df.columns else df['user_name'].to_numpy()
     preds: dict[str, str] = {}
-    for user_name, b, i in zip(df['user_name'].to_numpy(), binary, idx_5c):
+    for key, b, i in zip(keys, binary, idx_5c):
         c = classes[int(i)]
         if b == 1:
             label = 'Extreme' if c == 'Extreme' else 'Very High'
         else:
             label = c if c not in POSITIVE else 'No risk'
-        preds[user_name] = label
+        preds[key] = label
 
     # Summary
     from collections import Counter
     dist = Counter(preds.values())
-    print(f'\nPrediction distribution ({len(preds)} unique usernames):')
+    print(f'\nPrediction distribution ({len(preds)} rows):')
     for lbl in ['Extreme', 'Very High', 'High', 'Low', 'No risk']:
         print(f'  {lbl:>10s}: {dist.get(lbl, 0)}')
 

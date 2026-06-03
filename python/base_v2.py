@@ -55,75 +55,54 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
         'user_id_num', 'subscribed_ts', 'risk_level', 'risk_score',
         'total_chargebacks',
     ]
-    if 'is_internal_data' in df.columns:
-        cols.append('is_internal_data')
+    # Keep the row primary key so predictions can be written back PER ROW
+    # (per user x cohort), not collapsed per username.
+    for extra in ('id', 'is_internal_data'):
+        if extra in df.columns:
+            cols.append(extra)
 
     return df[cols].dropna(subset=['user_id_num'])
 
 
 def update_risk_levels(predictions: dict[str, str]) -> int:
     """
-    Write predicted risk levels back to DB, skipping warm (is_internal_data=True) rows
-    so ground-truth labels are not overwritten.
+    Write predicted risk levels back to DB PER ROW, keyed by primary key `id`
+    ({tracking_link_id}_{user_id}), so the same user can be Extreme in one cohort
+    and No-risk in another. Warm rows (is_internal_data=True) are skipped so
+    ground-truth labels are not overwritten.
 
-    Issues one UPDATE per (risk_level, chunk-of-usernames) instead of one per
-    username, so cost is O(n_risk_levels * ceil(N / chunk_size)) statements
-    rather than O(N).
+    BULK: group row-ids by target label and issue one `UPDATE ... WHERE id IN (...)`
+    per label (chunked) — ~5 labels instead of one statement per row.
+
+    `predictions` maps row-id -> title-case risk label.
     """
-    import time
-
     db.connect(reuse_if_open=True)
 
-    # Bucket usernames by their target risk_level (only 5 possible values),
-    # skipping anything we can't map to a DB-side label.
-    by_risk: dict[str, list[str]] = {}
-    skipped = 0
-    for username, risk_title in predictions.items():
+    # group row-ids by the db-form label
+    by_label: dict[str, list] = {}
+    for row_id, risk_title in predictions.items():
         risk_db = RISK_TO_DB.get(risk_title)
         if risk_db is None:
-            skipped += 1
             continue
-        by_risk.setdefault(risk_db, []).append(username)
-
-    total_preds = sum(len(v) for v in by_risk.values())
-    chunk_size = 500
-    n_chunks = sum(
-        (len(v) + chunk_size - 1) // chunk_size for v in by_risk.values()
-    )
-    t_start = time.time()
-    print(f'[update_risk_levels] starting: {total_preds} predictions across '
-          f'{len(by_risk)} risk levels, {n_chunks} chunks of up to '
-          f'{chunk_size}'
-          + (f' (skipped {skipped} with unknown risk)' if skipped else ''))
-
-    # Test once whether is_internal_data exists, instead of try/except per row.
-    has_internal = hasattr(TrackingLinkSubscriber, 'is_internal_data')
+        by_label.setdefault(risk_db, []).append(row_id)
 
     updated = 0
-    chunk_idx = 0
-    for risk_db, usernames in by_risk.items():
-        for i in range(0, len(usernames), chunk_size):
-            chunk_idx += 1
-            chunk = usernames[i:i + chunk_size]
-            t_chunk = time.time()
+    chunk_size = 1000   # cap IN(...) list size per statement
+    for risk_db, ids in by_label.items():
+        for i in range(0, len(ids), chunk_size):
+            chunk = ids[i:i + chunk_size]
             query = (
                 TrackingLinkSubscriber
                 .update(risk_level=risk_db, is_processed=True)
-                .where(TrackingLinkSubscriber.username.in_(chunk))
+                .where(TrackingLinkSubscriber.id.in_(chunk))
             )
-            if has_internal:
+            # Only touch cold rows if the column exists
+            try:
                 query = query.where(
                     TrackingLinkSubscriber.is_internal_data == False
                 )
-            chunk_updated = query.execute()
-            updated += chunk_updated
-            elapsed = time.time() - t_chunk
-            total_elapsed = time.time() - t_start
-            print(f'[update_risk_levels] chunk {chunk_idx}/{n_chunks} '
-                  f'(risk={risk_db}, n={len(chunk)}): {chunk_updated} rows '
-                  f'updated in {elapsed:.2f}s (running total: {updated}, '
-                  f'{total_elapsed:.1f}s)')
+            except Exception:
+                pass
+            updated += query.execute()
 
-    print(f'[update_risk_levels] done: {updated} rows updated in '
-          f'{time.time() - t_start:.1f}s')
     return updated
