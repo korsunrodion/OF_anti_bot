@@ -77,6 +77,10 @@ export class TrackingLinkRepository {
         isInternalData2: false,
         ...buildTimestampFilter(filter),
       },
+      // Stable ordering on the immutable primary key so paginated callers
+      // don't see duplicates / misses when other writes (e.g. the predict
+      // job's bulk UPDATE) rewrite the heap between page fetches.
+      order: { id: 'ASC' },
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -93,6 +97,7 @@ export class TrackingLinkRepository {
         isInternalData2: false,
         ...buildTimestampFilter(filter),
       },
+      order: { id: 'ASC' },
     });
     return rows.map(toSubscriptionDto);
   }
@@ -100,6 +105,7 @@ export class TrackingLinkRepository {
   async findLinkSummary(trackingLinkId: number): Promise<TrackingLinkDto> {
     const [rows, count] = await this.subscriberRepo.findAndCount({
       where: { trackingLinkId, isInternalData2: false },
+      order: { id: 'ASC' },
     });
     if (count === 0) {
       throw new NotFoundException(
