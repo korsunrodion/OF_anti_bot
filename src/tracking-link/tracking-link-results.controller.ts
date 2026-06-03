@@ -48,6 +48,16 @@ export class TrackingLinkResultsController {
     required: false,
     example: '2026-05-01T00:00:00.000Z',
   })
+  @ApiQuery({
+    name: 'riskLevel',
+    required: false,
+    isArray: true,
+    enum: ['no risk', 'low', 'high', 'very high', 'extreme'],
+    example: ['high', 'extreme'],
+    description:
+      'Filter to one or more risk levels (comma-separated or repeated). ' +
+      'NULL rows excluded when set; omit to include unscored rows.',
+  })
   @ApiResponse({
     status: 200,
     description: 'Paginated subscriptions',
@@ -69,7 +79,11 @@ export class TrackingLinkResultsController {
     const [data, total] = await this.repository.findAllSubscriptions(
       query.page,
       query.limit,
-      { createdSince: query.createdSince, updatedSince: query.updatedSince },
+      {
+        createdSince: query.createdSince,
+        updatedSince: query.updatedSince,
+        riskLevel: query.riskLevel,
+      },
     );
     return { data, total, page: query.page, limit: query.limit };
   }
@@ -110,6 +124,16 @@ export class TrackingLinkResultsController {
     required: false,
     example: '2026-05-01T00:00:00.000Z',
   })
+  @ApiQuery({
+    name: 'riskLevel',
+    required: false,
+    isArray: true,
+    enum: ['no risk', 'low', 'high', 'very high', 'extreme'],
+    example: ['high', 'extreme'],
+    description:
+      'Filter to one or more risk levels (comma-separated or repeated). ' +
+      'NULL rows excluded when set; omit to include unscored rows.',
+  })
   @ApiResponse({
     status: 200,
     description: 'Paginated subscriptions',
@@ -130,6 +154,7 @@ export class TrackingLinkResultsController {
     return this.repository.findSubscriptionsByLinkId(trackingLinkId, {
       createdSince: query.createdSince,
       updatedSince: query.updatedSince,
+      riskLevel: query.riskLevel,
     });
   }
 }
