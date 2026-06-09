@@ -1,5 +1,6 @@
 import pandas as pd
 from db import db, TrackingLinkSubscriber
+from datetime import datetime, timezone
 
 RISK_TO_DB = {
     'No risk':   'no risk',
