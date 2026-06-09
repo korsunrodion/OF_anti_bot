@@ -46,9 +46,27 @@ export class TrackingLinkRepository {
     trackingLinkName: string,
     newSubscribers: SubscriberDto[],
   ): Promise<void> {
-    const entities = newSubscribers.map((s) =>
-      manager.create(TrackingLinkSubscriber, {
-        id: `${trackingLinkId}_${s.id}`,
+    const ids = newSubscribers.map((s) => `${trackingLinkId}_${s.id}`);
+    // Look up which row-ids already exist so we DON'T overwrite their
+    // original createdAt on update — only newly inserted rows get a fresh
+    // createdAt. (manager.save chooses INSERT vs UPDATE per row based on
+    // whether the primary key exists.)
+    const existingIds = new Set(
+      (
+        await manager.find(TrackingLinkSubscriber, {
+          where: { id: In(ids) },
+          select: ['id'],
+        })
+      ).map((e) => e.id),
+    );
+    // Stamp every newly inserted row this batch with the same `createdAt`
+    // so the value reflects when this upsert wrote them, independent of
+    // whether @CreateDateColumn fires.
+    const now = new Date();
+    const entities = newSubscribers.map((s) => {
+      const id = `${trackingLinkId}_${s.id}`;
+      return manager.create(TrackingLinkSubscriber, {
+        id,
         trackingLinkId,
         trackingLinkName,
         username: s.username,
@@ -58,8 +76,11 @@ export class TrackingLinkRepository {
         header: s.header,
         isOnlineMatchesSubscription: s.isOnlineMatchesSubscription,
         isReadingMessages: s.isReadingMessages,
-      }),
-    );
+        // Only set createdAt for genuinely new rows; omit on existing rows
+        // so manager.save's UPDATE leaves the original timestamp alone.
+        ...(existingIds.has(id) ? {} : { createdAt: now }),
+      });
+    });
     await manager.save(TrackingLinkSubscriber, entities);
   }
 
