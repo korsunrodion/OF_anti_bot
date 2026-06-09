@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 import pandas as pd
 from db import db, TrackingLinkSubscriber
 
@@ -32,8 +30,10 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
     # NaT-drop ~86% of new links (incl. ~all high-risk rows) the way a
     # formatless to_datetime does. utc=True + tz_localize(None) keeps the
     # tz-naive epoch convention used at training time.
+    # dayfirst=True so 'DD/MM/YYYY hh:mmam/pm' rows parse correctly (not
+    # month-first); legacy ISO / 'YYYY-MM-DD' rows are unaffected.
     df['subscribed_at'] = pd.to_datetime(
-        df['subscribed_at'], format='mixed', utc=True, errors='coerce'
+        df['subscribed_at'], format='mixed', dayfirst=True, utc=True, errors='coerce'
     ).dt.tz_localize(None)
     df = df.dropna(subset=['subscribed_at', 'user_name'])
 
@@ -88,10 +88,6 @@ def update_risk_levels(predictions: dict[str, str]) -> int:
             continue
         by_label.setdefault(risk_db, []).append(row_id)
 
-    # Stamp every row updated this batch with the same `updated_at` so the
-    # value reflects when this prediction run wrote them.
-    now = datetime.now(timezone.utc)
-
     updated = 0
     chunk_size = 1000   # cap IN(...) list size per statement
     for risk_db, ids in by_label.items():
@@ -99,15 +95,8 @@ def update_risk_levels(predictions: dict[str, str]) -> int:
             chunk = ids[i:i + chunk_size]
             query = (
                 TrackingLinkSubscriber
-                .update(risk_level=risk_db, is_processed=True, updated_at=now)
+                .update(risk_level=risk_db, is_processed=True)
                 .where(TrackingLinkSubscriber.id.in_(chunk))
-                # Only bump updated_at when risk_level actually changes.
-                # `!= value OR IS NULL` covers the case where the current
-                # value is NULL (PG: NULL != x is NULL, not TRUE).
-                .where(
-                    (TrackingLinkSubscriber.risk_level != risk_db)
-                    | TrackingLinkSubscriber.risk_level.is_null()
-                )
             )
             # Only touch cold rows if the column exists
             try:

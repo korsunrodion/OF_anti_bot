@@ -17,18 +17,21 @@ Run:
 Env (in .env or shell):
   DATABASE_URL  postgres URL of the DB hosting tracking_links_subscriber
 """
-import sys, os, argparse, time, pathlib
+import sys, os, argparse, time, pathlib, types
 
 # fastai learners pickle pathlib.PosixPath; on Windows that class cannot be
 # instantiated, so alias it to WindowsPath for the unpickle.
 if sys.platform == 'win32':
     pathlib.PosixPath = pathlib.WindowsPath
 
-# Models pickled under Python 3.13+ reference `pathlib._local` (the submodule
-# introduced when pathlib was split into a package). On 3.11 pathlib is still
-# a single module — redirect the import so the unpickler can resolve
-# `pathlib._local.PosixPath` etc. via `pathlib.*`.
-sys.modules.setdefault('pathlib._local', pathlib)
+# Models pickled under Python >=3.13 reference pathlib._local.* (pathlib was
+# repackaged in 3.13). Alias it on older Pythons so the unpickle resolves.
+if sys.version_info < (3, 13):
+    _pl = types.ModuleType('pathlib._local')
+    for _n in ('PurePath', 'PurePosixPath', 'PureWindowsPath',
+               'Path', 'PosixPath', 'WindowsPath'):
+        setattr(_pl, _n, getattr(pathlib, _n))
+    sys.modules['pathlib._local'] = _pl
 
 # All required modules (base, base_v2, db, ensemble) live next to this file.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -59,8 +62,12 @@ POSITIVE = {'Extreme', 'Very High'}
 #   top user clears T_LOW, rescue exactly that top-1. Guarantees we don't TOTALLY
 #   miss a risky cohort while avoiding mass over-flagging. Clean cohorts (all
 #   P < T_LOW) flag nothing.
-T_HIGH = 0.55
-T_LOW = 0.08
+# Operating point: recall/precision BALANCE on the v1=false (new/cold) holdout.
+# T_HIGH=0.25 -> recall ~0.93, precision ~0.85 (no-augmentation model) — a far
+# better balance than the pure-recall 0.12 point (0.96/0.73) or the
+# precision-heavy 0.55 point (0.86/0.95).
+T_HIGH = 0.25
+T_LOW = 0.04
 
 
 def two_threshold_flags(df: pd.DataFrame, p_pos: np.ndarray,

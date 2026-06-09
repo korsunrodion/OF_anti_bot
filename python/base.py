@@ -99,9 +99,11 @@ def clean_training(df: pd.DataFrame) -> pd.DataFrame:
     name features. Mirrors project/base.py's clean() for training-time use.
     """
     df = df.copy()
+    # format='mixed', dayfirst=True tolerates both the legacy
+    # 'YYYY-MM-DD HH:MM:SS' rows and the day-first 'DD/MM/YYYY hh:mmam/pm' rows
+    # (the v1=false batch) — a strict format silently NaT-drops the latter.
     df['subscribed_at'] = pd.to_datetime(
-        df['subscribed_at'], format='mixed', utc=True, errors='coerce'
-    ).dt.tz_localize(None)
+        df['subscribed_at'], format='mixed', dayfirst=True, errors='coerce')
     df = df.dropna(subset=['subscribed_at', 'user_name']).copy()
     title_map = {'No risk': 1, 'Low': 2, 'High': 3, 'Very High': 4, 'Extreme': 5}
     df['risk_score'] = df['risk_level'].map(title_map)
@@ -164,17 +166,27 @@ def compute_user_history(df: pd.DataFrame) -> pd.DataFrame:
 
 COHORT_REL2_COLS = ['id_gap_nbr', 'ts_gap_nbr', 'id_cluster_n', 'ts_cluster_n',
                     'name_prefix_share', 'id_rank', 'ts_rank',
-                    'batch_extreme_frac', 'clust_ex']
+                    'batch_extreme_frac', 'clust_ex',
+                    # multi-scale coupling: batches aren't always consecutive —
+                    # coupled accounts show up at the 1k/10k id scale and the
+                    # minutes/day time scale too.
+                    'id_cluster_1k', 'id_cluster_10k', 'ts_cluster_5m', 'ts_cluster_24h',
+                    # relative tightness: own nearest-neighbor gap vs the cohort's
+                    # median gap (log ratio; negative = unusually tight pair).
+                    'id_gap_rel', 'ts_gap_rel']
 ID_WIN = 50          # user_id window for "created in the same batch"
 TS_WIN = 3600        # signup-time window (1h) for "signed up together"
+ID_WINS = (50, 1000, 10000)
+TS_WINS = (300, 3600, 86400)
 
 
 def _within_cohort_structure(df):
     """Richer within-cohort relational features (cold-computable per cohort):
-    cluster density in id/time, name templating, within-cohort ranks."""
+    multi-scale cluster density in id/time, name templating, within-cohort ranks."""
     from collections import Counter
-    idc = np.zeros(len(df)); tsc = np.zeros(len(df)); nps = np.zeros(len(df))
-    idr = np.zeros(len(df)); tsr = np.zeros(len(df))
+    idc = {w: np.zeros(len(df)) for w in ID_WINS}
+    tsc = {w: np.zeros(len(df)) for w in TS_WINS}
+    nps = np.zeros(len(df)); idr = np.zeros(len(df)); tsr = np.zeros(len(df))
     pos = {ix: i for i, ix in enumerate(df.index)}
     for _, sub in df.groupby('tracking_model_name', sort=False):
         ids = pd.to_numeric(sub['user_id_num'], errors='coerce').values.astype(float)
@@ -185,11 +197,15 @@ def _within_cohort_structure(df):
         tsrank = pd.Series(ts).rank(pct=True).values
         for j, ix in enumerate(sub.index):
             k = pos[ix]
-            idc[k] = (np.abs(ids - ids[j]) <= ID_WIN).sum() - 1
-            tsc[k] = (np.abs(ts - ts[j]) <= TS_WIN).sum() - 1
+            did = np.abs(ids - ids[j]); dts = np.abs(ts - ts[j])
+            for w in ID_WINS:
+                idc[w][k] = (did <= w).sum() - 1
+            for w in TS_WINS:
+                tsc[w][k] = (dts <= w).sum() - 1
             nps[k] = (pc[pref[j]] - 1) / max(n - 1, 1)
             idr[k] = idrank[j]; tsr[k] = tsrank[j]
-    df['id_cluster_n'] = idc; df['ts_cluster_n'] = tsc
+    df['id_cluster_n'] = idc[50]; df['id_cluster_1k'] = idc[1000]; df['id_cluster_10k'] = idc[10000]
+    df['ts_cluster_5m'] = tsc[300]; df['ts_cluster_n'] = tsc[3600]; df['ts_cluster_24h'] = tsc[86400]
     df['name_prefix_share'] = nps; df['id_rank'] = idr; df['ts_rank'] = tsr
     return df
 
@@ -225,6 +241,9 @@ def add_batch_context(df: pd.DataFrame) -> pd.DataFrame:
                                              df['tracking_model_name'].values)
     df['ts_gap_nbr'] = _nearest_neighbor_gap(df['subscribed_ts'].values,
                                              df['tracking_model_name'].values)
+    gm = df.groupby('tracking_model_name', sort=False)
+    df['id_gap_rel'] = (df['id_gap_nbr'] - gm['id_gap_nbr'].transform('median')).astype(float)
+    df['ts_gap_rel'] = (df['ts_gap_nbr'] - gm['ts_gap_nbr'].transform('median')).astype(float)
     df = _within_cohort_structure(df)
     # Extreme-focused: cohort mean extreme-rate + clustered-AND-ever-extreme.
     if 'user_extreme_rate' in df.columns:
