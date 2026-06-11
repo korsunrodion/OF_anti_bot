@@ -6,8 +6,9 @@ Pipeline:
   3. Compute name features (aggregates + n-gram hashes)
   4. Enrich with per-user history (apply_user_history)
   5. Add per-cohort (tracking_link_id) batch context (add_batch_context)
-  6. Score with model.pkl — binary high-risk (Extreme∪VeryHigh) via per-cohort two-threshold rule,
-     with per-row 5-class probs reused to pick a refined label for negatives
+  6. Score with model.pkl — mid-level decision on P(Ex+VH): Extreme/Very High
+     at >= T_HIGH, 'High' in the mid band (T_MID..T_HIGH, plus per-cohort top-1
+     rescue); per-row 5-class probs reused to pick a refined label for the rest
   7. UPDATE risk_level on the cold rows (is_internal_data != True). Warm rows
      are skipped so ground-truth labels are not overwritten.
 
@@ -62,17 +63,34 @@ POSITIVE = {'Extreme', 'Very High'}
 #   top user clears T_LOW, rescue exactly that top-1. Guarantees we don't TOTALLY
 #   miss a risky cohort while avoiding mass over-flagging. Clean cohorts (all
 #   P < T_LOW) flag nothing.
-# Operating point: recall/precision BALANCE on the v1=false (new/cold) holdout.
-# T_HIGH=0.25 -> recall ~0.93, precision ~0.85 (no-augmentation model) — a far
-# better balance than the pure-recall 0.12 point (0.96/0.73) or the
-# precision-heavy 0.55 point (0.86/0.95).
-T_HIGH = 0.25
+# Operating point: MID-LEVEL decision (validated on the v1=false new/cold holdout;
+# no-review world — every signal must live in risk_level itself).
+#   Ex/VH zone : P(Ex+VH) >= T_HIGH=0.60 — actioned tier, precision-first.
+#                Holdout: precision 0.955-0.957 across retrains (0.55 straddles
+#                the 0.95 bar: 0.949-0.953), actioned recall ~0.84.
+#   High zone  : T_MID <= P < T_HIGH -> risk_level 'High' — the "general
+#                direction" tier (not actioned). Bots demoted from the Ex/VH
+#                zone land here, so SURFACED recall (Ex/VH or High on a true
+#                bot) stays ~0.95 regardless of T_HIGH.
+#   clear      : P < T_MID -> refined 5-class argmax label (No risk / Low / High).
+# Asymmetric scorecard (valid only while 'High' triggers no action):
+#   ~95% of bots surfaced with at least a High label / ~95.5% of actioned
+#   Ex/VH labels are correct.
+# Per-cohort rescue: a cohort with nothing in either zone still surfaces its
+# top-1 as 'High' if it clears T_LOW — prevents a suspicious cohort from
+# reading as all-No-risk, at zero Ex/VH-precision cost.
+T_HIGH = 0.60
+T_MID = 0.12
 T_LOW = 0.04
 
 
 def two_threshold_flags(df: pd.DataFrame, p_pos: np.ndarray,
                         t_high: float = T_HIGH, t_low: float = T_LOW) -> np.ndarray:
-    """Per-cohort (tracking_model_name) two-threshold high-risk decision."""
+    """Per-cohort (tracking_model_name) two-threshold high-risk decision.
+
+    Legacy single-output rule (rescue flags into the positive class); kept for
+    the eval scripts. Production now uses three_zone_decision below.
+    """
     flag = (p_pos >= t_high).astype(int)
     grp = df['tracking_model_name'].to_numpy()
     for cohort in np.unique(grp):
@@ -81,6 +99,28 @@ def two_threshold_flags(df: pd.DataFrame, p_pos: np.ndarray,
             idx = np.where(m)[0]
             flag[idx[np.argmax(p_pos[m])]] = 1   # rescue the cohort's top-1
     return flag
+
+
+def mid_level_decision(df: pd.DataFrame, p_pos: np.ndarray,
+                       t_high: float = T_HIGH, t_mid: float = T_MID,
+                       t_low: float = T_LOW) -> tuple[np.ndarray, np.ndarray]:
+    """Per-cohort mid-level decision -> (flag, high).
+
+    flag : P >= t_high — actioned risky labels (Extreme / Very High).
+    high : t_mid <= P < t_high — mid-confidence tier, labeled 'High'; PLUS the
+           per-cohort rescue: if a cohort has nothing flagged and nothing High
+           but its top user clears t_low, that top-1 is marked High so a
+           suspicious cohort never reads as all-No-risk.
+    """
+    flag = (p_pos >= t_high).astype(int)
+    high = ((p_pos >= t_mid) & (p_pos < t_high)).astype(int)
+    grp = df['tracking_model_name'].to_numpy()
+    for cohort in np.unique(grp):
+        m = grp == cohort
+        if flag[m].sum() == 0 and high[m].sum() == 0 and p_pos[m].max() >= t_low:
+            idx = np.where(m)[0]
+            high[idx[np.argmax(p_pos[m])]] = 1   # rescue -> 'High', not Ex/VH
+    return flag, high
 
 
 def prepare(df_raw: pd.DataFrame) -> pd.DataFrame:
@@ -97,11 +137,13 @@ def prepare(df_raw: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def predict_labels(learner, df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
-    """Return (binary_pred, label_idx_5class).
+def predict_labels(learner, df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return (binary_pred, high_pred, label_idx_5class).
 
-    binary_pred: per-cohort two-threshold high-risk decision (see
-        two_threshold_flags) on continuous P(Ex+VH).
+    binary_pred: per-cohort mid-level decision (see mid_level_decision) on
+        continuous P(Ex+VH) — the actioned Extreme/Very-High flags.
+    high_pred: mid-confidence tier (T_MID <= P < T_HIGH, or cohort rescue) —
+        these rows get risk_level 'High'.
     label_idx_5class: argmax over 5 classes (raw boosters, threshold-free) —
         used to pick a richer label on the negative side (No risk / Low / High).
     """
@@ -122,8 +164,8 @@ def predict_labels(learner, df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
                           else b.predict(X[:, 1:]))
     probs_5c = np.mean(probs_list, axis=0)              # (N, 5)
     p_pos = probs_5c[:, pos_idx].sum(axis=1)            # P(Extreme)+P(VeryHigh)
-    binary = two_threshold_flags(df, p_pos)
-    return binary, probs_5c.argmax(axis=1)
+    binary, high = mid_level_decision(df, p_pos)
+    return binary, high, probs_5c.argmax(axis=1)
 
 
 def predict():
@@ -154,7 +196,7 @@ def predict():
 
     print('Predicting ...')
     t1 = time.time()
-    binary, idx_5c = predict_labels(learner, df)
+    binary, high, idx_5c = predict_labels(learner, df)
     print(f'  predict: {time.time()-t1:.2f}s  '
           f'({(time.time()-t1)*1e3/len(df):.2f} ms/row)')
 
@@ -163,10 +205,14 @@ def predict():
     classes = list(learner.model.classes)
     keys = df['id'].to_numpy() if 'id' in df.columns else df['user_name'].to_numpy()
     preds: dict[str, str] = {}
-    for key, b, i in zip(keys, binary, idx_5c):
+    n_mid = 0
+    for key, b, h, i in zip(keys, binary, high, idx_5c):
         c = classes[int(i)]
         if b == 1:
             label = 'Extreme' if c == 'Extreme' else 'Very High'
+        elif h == 1:
+            label = 'High'   # mid-confidence tier (band T_MID..T_HIGH or rescue)
+            n_mid += 1
         else:
             label = c if c not in POSITIVE else 'No risk'
         preds[key] = label
@@ -177,6 +223,8 @@ def predict():
     print(f'\nPrediction distribution ({len(preds)} rows):')
     for lbl in ['Extreme', 'Very High', 'High', 'Low', 'No risk']:
         print(f'  {lbl:>10s}: {dist.get(lbl, 0)}')
+    print(f'  (of the High labels, {n_mid} from the mid band '
+          f'{T_MID:.2f}-{T_HIGH:.2f} / cohort rescue)')
 
     if args.dry_run:
         print('\n--dry-run: skipping DB updates.')

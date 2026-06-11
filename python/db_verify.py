@@ -40,6 +40,10 @@ class Subscription(Model):
     model_id            = CharField(null=True)
     tracking_model_id   = CharField(null=True)
     tracking_model_name = CharField(null=True)
+    # Profile-presence data (from result.csv / target DB): URL string when the
+    # user has one, '' when known-absent, NULL when the user wasn't scraped.
+    avatar              = CharField(null=True)
+    header              = CharField(null=True)
     updated_at          = DateTimeField(default=datetime.now)
 
     class Meta:
