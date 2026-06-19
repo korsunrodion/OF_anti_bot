@@ -22,6 +22,7 @@ const UPSERT_EXAMPLE = {
       header: 'https://cdn.example.com/header.jpg',
       isOnlineMatchesSubscription: true,
       isReadingMessages: false,
+      totalSpent: 1,
     },
   ],
 };

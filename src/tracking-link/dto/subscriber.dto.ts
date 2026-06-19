@@ -33,4 +33,8 @@ export class SubscriberDto {
   @ApiProperty({ example: false })
   @IsBoolean()
   isReadingMessages: boolean;
+
+  @ApiProperty({ example: 1 })
+  @IsNumber()
+  totalSpent: number;
 }

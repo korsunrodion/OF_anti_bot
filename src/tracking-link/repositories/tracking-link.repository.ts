@@ -76,6 +76,7 @@ export class TrackingLinkRepository {
         header: s.header,
         isOnlineMatchesSubscription: s.isOnlineMatchesSubscription,
         isReadingMessages: s.isReadingMessages,
+        totalSpent: s.totalSpent,
         // Only set createdAt for genuinely new rows; omit on existing rows
         // so manager.save's UPDATE leaves the original timestamp alone.
         ...(existingIds.has(id) ? {} : { createdAt: now }),
@@ -152,6 +153,7 @@ function toSubscriptionDto(
     userId: s.userId,
     subscriptionDate: s.subscriptionDate,
     riskLevel: s.riskLevel,
+    totalSpent: s.totalSpent,
     createdAt: s.createdAt,
     updatedAt: s.updatedAt,
   };

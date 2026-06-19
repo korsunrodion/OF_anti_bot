@@ -31,6 +31,9 @@ export class TrackingLinkSubscriber {
   @Column({ default: 0 })
   totalChargebacks: number;
 
+  @Column({ default: 0 })
+  totalSpent: number;
+
   @Column({ nullable: true })
   avatarUrl: string;
 

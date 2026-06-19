@@ -22,6 +22,9 @@ export class TrackingLinkSubscriptionDto {
   @ApiProperty({ enum: RISK_LEVELS, example: 'high' })
   riskLevel: RiskLevel;
 
+  @ApiProperty({ example: 1 })
+  totalSpent: number;
+
   @ApiProperty({ example: '2026-05-01T10:00:00.000Z' })
   createdAt: Date;
 
